@@ -1,0 +1,62 @@
+# Docker Compose file Reference (https://docs.docker.com/compose/compose-file/)
+
+version: '3.7'
+
+# Define services
+services:
+
+  # Database Service (Mysql)
+  mysql-server:
+    image: mysql:5.7
+    ports:
+      - 3306:3306
+    restart: always
+    environment:
+      MYSQL_DATABASE: n11db
+      MYSQL_USER: eventuser
+      MYSQL_PASSWORD: userevent
+      MYSQL_ROOT_PASSWORD: testpassword
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - backend
+
+  conference-server:
+    container_name: conference-server
+    image: conference-server
+    restart: always
+    build:
+      context: ./
+      dockerfile: DockerFile.sh
+    ports:
+      - 8080:8080
+    networks:
+      - backend
+    depends_on:
+      - mysql-server
+    environment: # Pass environment variables to the service
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-server:3306/n11db?useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+      SPRING_DATASOURCE_USERNAME: eventuser
+      SPRING_DATASOURCE_PASSWORD: userevent
+
+  conference-frontend:
+    image: kazimunalan/conferecence-frontend:latest
+    container_name: conference-frontend
+    volumes:
+      - ./:/usr/src/app
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+    networks:
+      - backend
+
+# Volumes
+volumes:
+  db-data:
+
+# Networks to be created to facilitate communication between containers
+networks:
+  backend:
+    driver: "bridge"
+
